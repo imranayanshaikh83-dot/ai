@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>GIANT GAME</title>
+<style>
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: #222;
+        font-family: Arial, sans-serif;
+    }
+    canvas {
+        background: #1e1e1e;
+        display: block;
+        margin: 0 auto;
+    }
+    #ui {
+        color: white;
+        text-align: center;
+        padding: 10px;
+        font-size: 24px;
+    }
+</style>
+</head>
+<body>
+
+<canvas id="game" width="1000" height="550"></canvas>
+<div id="ui">Score: <span id="score">0</span></div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const scoreUI = document.getElementById("score");
+
+let keys = {};
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+//==========================
+// PLAYER
+//==========================
+const player = {
+    x: 100,
+    y: 100,
+    w: 40,
+    h: 60,
+    vx: 0,
+    vy: 0,
+    speed: 5,
+    grounded: false,
+    jumping: false
+};
+
+const gravity = 0.5;
+const friction = 0.8;
+
+//==========================
+// PLATFORMS
+//==========================
+const platforms = [
+    { x: 0, y: 520, w: 1000, h: 40 },
+    { x: 150, y: 440, w: 200, h: 20 },
+    { x: 450, y: 360, w: 250, h: 20 },
+    { x: 800, y: 300, w: 150, h: 20 }
+];
+
+//==========================
+// COINS
+//==========================
+let coins = [
+    { x: 180, y: 390, r: 10, collected: false },
+    { x: 500, y: 310, r: 10, collected: false },
+    { x: 850, y: 250, r: 10, collected: false }
+];
+
+//==========================
+// ENEMIES
+//==========================
+let enemies = [
+    { x: 260, y: 400, w: 30, h: 40, dir: 1, speed: 2, left: 150, right: 350 },
+    { x: 520, y: 320, w: 30, h: 40, dir: -1, speed: 2, left: 450, right: 650 }
+];
+
+let score = 0;
+
+//==========================
+// GAME LOOP
+//==========================
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+//==========================
+// UPDATE
+//==========================
+function update() {
+    // Movement
+    if (keys["ArrowRight"] || keys["d"]) player.vx += 0.6;
+    if (keys["ArrowLeft"] || keys["a"]) player.vx -= 0.6;
+
+    // Jump
+    if ((keys["ArrowUp"] || keys["w"] || keys[" "]) && player.grounded) {
+        player.vy = -12;
+        player.jumping = true;
+        player.grounded = false;
+    }
+
+    player.vx *= friction;
+    player.vy += gravity;
+
+    player.x += player.vx;
+    player.y += player.vy;
+
+    // Collisions
+    player.grounded = false;
+    for (let p of platforms) {
+        let dir = col(player, p);
+        if (dir === "bottom") {
+            player.grounded = true;
+            player.vy = 0;
+        }
+        if (dir === "top") player.vy = 0;
+        if (dir === "left" || dir === "right") player.vx = 0;
+    }
+
+    if (player.grounded) player.vy = 0;
+
+    // Enemies move
+    for (let e of enemies) {
+        e.x += e.speed * e.dir;
+        if (e.x < e.left || e.x > e.right) e.dir *= -1;
+
+        if (rectHit(player, e)) {
+            alert("You were caught by an enemy! Game Over.");
+            location.reload();
+        }
+    }
+
+    // Coins collected
+    for (let c of coins) {
+        if (!c.collected && circleHit(player, c)) {
+            c.collected = true;
+            score++;
+            scoreUI.textContent = score;
+        }
+    }
+
+    // Win condition
+    if (score === coins.length) {
+        alert("YOU WIN THE GIANT GAME!");
+        location.reload();
+    }
+}
+
+//==========================
+// COLLISION FUNCTIONS
+//==========================
+function col(a, b) {
+    let vX = (a.x + a.w / 2) - (b.x + b.w / 2);
+    let vY = (a.y + a.h / 2) - (b.y + b.h / 2);
+    let hW = (a.w / 2) + (b.w / 2);
+    let hH = (a.h / 2) + (b.h / 2);
+    let colDir = null;
+
+    if (Math.abs(vX) < hW && Math.abs(vY) < hH) {
+        let oX = hW - Math.abs(vX);
+        let oY = hH - Math.abs(vY);
+        if (oX >= oY) {
+            if (vY > 0) {
+                colDir = "top"; a.y += oY;
+            } else {
+                colDir = "bottom"; a.y -= oY;
+            }
+        } else {
+            if (vX > 0) {
+                colDir = "left"; a.x += oX;
+            } else {
+                colDir = "right"; a.x -= oX;
+            }
+        }
+    }
+    return colDir;
+}
+
+function rectHit(a, b) {
+    return (
+        a.x < b.x + b.w &&
+        a.x + a.w > b.x &&
+        a.y < b.y + b.h &&
+        a.y + a.h > b.y
+    );
+}
+
+function circleHit(rect, circle) {
+    let distX = Math.abs(circle.x - rect.x - rect.w / 2);
+    let distY = Math.abs(circle.y - rect.y - rect.h / 2);
+
+    if (distX > (rect.w / 2 + circle.r)) return false;
+    if (distY > (rect.h / 2 + circle.r)) return false;
+
+    return true;
+}
+
+//==========================
+// DRAW
+//==========================
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Background
+    ctx.fillStyle = "#111";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Platforms
+    ctx.fillStyle = "#444";
+    platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
+
+    // Coins
+    coins.forEach(c => {
+        if (!c.collected) {
+            ctx.fillStyle = "gold";
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+
+    // Enemies
+    ctx.fillStyle = "red";
+    enemies.forEach(e => ctx.fillRect(e.x, e.y, e.w, e.h));
+
+    // Player
+    ctx.fillStyle = "cyan";
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+}
+
+// START
+loop();
+</script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ENDLESS GOLD GAME</title>
+<style>
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: #1a1a1a;
+        font-family: Arial, sans-serif;
+    }
+    #ui {
+        color: gold;
+        font-size: 24px;
+        position: absolute;
+        top: 10px;
+        left: 20px;
+    }
+</style>
+</head>
+<body>
+
+<div id="ui">Gold: <span id="score">0</span></div>
+<canvas id="game" width="1000" height="550"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const scoreUI = document.getElementById("score");
+
+let keys = {};
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+//============================
+// PLAYER
+//============================
+const player = {
+    x: 100,
+    y: 300,
+    w: 40,
+    h: 60,
+    vx: 0,
+    vy: 0,
+    speed: 4,
+    grounded: false
+};
+
+const gravity = 0.6;
+const friction = 0.8;
+
+//============================
+// WORLD DATA
+//============================
+let cameraX = 0;
+let chunks = [];
+let golds = [];
+let chunkSize = 600;    // Width of each generated chunk
+let score = 0;
+
+//============================
+// GENERATE A NEW SECTION OF MAP
+//============================
+function generateChunk(startX) {
+    // Ground
+    chunks.push({
+        x: startX,
+        y: 520,
+        w: chunkSize,
+        h: 40
+    });
+
+    // Random platforms
+    for (let i = 0; i < 3; i++) {
+        let px = startX + Math.random() * (chunkSize - 150);
+        let py = 300 + Math.random() * 200;
+        chunks.push({ x: px, y: py, w: 160, h: 20 });
+    }
+
+    // Random gold
+    for (let i = 0; i < 5; i++) {
+        let gx = startX + Math.random() * chunkSize;
+        let gy = 250 + Math.random() * 250;
+        golds.push({ x: gx, y: gy, r: 12, collected: false });
+    }
+}
+
+// Generate initial 3 chunks
+generateChunk(0);
+generateChunk(chunkSize);
+generateChunk(chunkSize * 2);
+
+//============================
+// COLLISION CHECK
+//============================
+function collide(a, b) {
+    let vX = (a.x + a.w / 2) - (b.x + b.w / 2);
+    let vY = (a.y + a.h / 2) - (b.y + b.h / 2);
+    let hW = a.w / 2 + b.w / 2;
+    let hH = a.h / 2 + b.h / 2;
+
+    if (Math.abs(vX) < hW && Math.abs(vY) < hH) {
+        let oX = hW - Math.abs(vX);
+        let oY = hH - Math.abs(vY);
+
+        if (oX > oY) {
+            if (vY > 0) { a.y += oY; return "top"; }
+            else        { a.y -= oY; return "bottom"; }
+        } else {
+            if (vX > 0) { a.x += oX; return "left"; }
+            else        { a.x -= oX; return "right"; }
+        }
+    }
+    return null;
+}
+
+function circleHit(rect, circle) {
+    let dx = Math.abs(circle.x - (rect.x + rect.w / 2));
+    let dy = Math.abs(circle.y - (rect.y + rect.h / 2));
+    return dx < rect.w / 2 + circle.r &&
+           dy < rect.h / 2 + circle.r;
+}
+
+//============================
+// UPDATE LOOP
+//============================
+function update() {
+
+    // Move player
+    if (keys["ArrowRight"] || keys["d"]) player.vx += 0.7;
+    if (keys["ArrowLeft"]  || keys["a"]) player.vx -= 0.7;
+    if ((keys["ArrowUp"] || keys["w"] || keys[" "]) && player.grounded) {
+        player.vy = -12;
+    }
+
+    player.vx *= friction;
+    player.vy += gravity;
+
+    player.x += player.vx;
+    player.y += player.vy;
+
+    // Camera follows player
+    cameraX = player.x - 300;
+
+    // Collision detection
+    player.grounded = false;
+
+    chunks.forEach(chunk => {
+        let col = collide(player, chunk);
+        if (col === "bottom") {
+            player.grounded = true;
+            player.vy = 0;
+        }
+    });
+
+    // Gold collection
+    golds.forEach(g => {
+        if (!g.collected && circleHit(player, g)) {
+            g.collected = true;
+            score++;
+            scoreUI.textContent = score;
+        }
+    });
+
+    // Generate new chunks when player approaches the end
+    let nextChunkX = chunks[chunks.length - 1].x + chunkSize;
+    if (player.x + 800 > nextChunkX) {
+        generateChunk(nextChunkX);
+    }
+}
+
+//============================
+// DRAW LOOP
+//============================
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Background
+    ctx.fillStyle = "#111";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw chunks
+    ctx.fillStyle = "#444";
+    chunks.forEach(c => {
+        ctx.fillRect(c.x - cameraX, c.y, c.w, c.h);
+    });
+
+    // Draw gold
+    golds.forEach(g => {
+        if (!g.collected) {
+            ctx.fillStyle = "gold";
+            ctx.beginPath();
+            ctx.arc(g.x - cameraX, g.y, g.r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+
+    // Draw player
+    ctx.fillStyle = "cyan";
+    ctx.fillRect(player.x - cameraX, player.y, player.w, player.h);
+}
+
+//============================
+// GAME LOOP
+//============================
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
