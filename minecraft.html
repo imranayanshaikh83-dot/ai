@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Simple AI Chatbot</title>
+
+<body>
+
+<h1>🤖 Simple AI Chatbot</h1>
+
+<div id="chatbox"></div>
+
+<br>
+<input id="input" type="text" placeholder="Type a message...">
+<button onclick="sendMessage()">Send</button>
+
+<script>
+    function botReply(message) {
+        message = message.toLowerCase();
+
+        if (message.includes("hello") || message.includes("hi")) {
+            return "Hello! How can I help you?";
+        }
+        if (message.includes("how are you")) {
+            return "I'm just code, but I'm doing great!";
+        }
+       
+        if (message.includes("bye")) {
+            return "Goodbye! Have a great day!";
+        }
+         if (message.includes("what is 2+2")) {
+            return "4";
+        }
+         if (message.includes("5+5")) {
+            return "10!";
+        }
+         if (message.includes("chat gtp is better then you or you are better then chat gpt")) {
+            return "if he use it full power then it can get me some trobule but i will win";
+        }
+         if (message.includes("can chatgtp beat you ")) {
+            return "NAH I'DID WIN";
+        }
+         if (message.includes("what is 1+1")) {
+            return "it's 2 YOU DONT KNOW FOOLISH";
+        }
+         if (message.includes("who is the most alpha person in the world")) {
+            return "it's ayman sir!";
+        }
+         if (message.includes("meri maa ka naam kya hai")) {
+            return "shabana bano mohammed imran shaikh!";
+        }
+
+        // default response
+        return "I don't understand, but I'm learning!";
+    }
+
+    function sendMessage() {
+        const input = document.getElementById("input");
+        const message = input.value.trim();
+        if (message === "") return;
+
+        const chatbox = document.getElementById("chatbox");
+
+        // User message
+        chatbox.innerHTML += `<p class="user"><strong>You:</strong> ${message}</p>`;
+
+        // Bot reply
+        const reply = botReply(message);
+        chatbox.innerHTML += `<p class="bot"><strong>AI:</strong> ${reply}</p>`;
+
+        chatbox.scrollTop = chatbox.scrollHeight;
+        input.value = "";
+    }
+</script>
+
+</body>
+</html>

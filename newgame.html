@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Big Platformer Game</title>
+<style>
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: #222;
+        font-family: Arial, sans-serif;
+    }
+    #gameCanvas {
+        background: #333;
+        display: block;
+        margin: 0 auto;
+        border: 4px solid #111;
+    }
+    #info {
+        color: white;
+        text-align: center;
+        margin-top: 10px;
+    }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas" width="900" height="500"></canvas>
+<div id="info">Use Arrow Keys or WASD to Move & Jump</div>
+
+<script>
+//========================
+// Game Setup
+//========================
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let keys = {};
+
+document.addEventListener("keydown", (e) => keys[e.key] = true);
+document.addEventListener("keyup",   (e) => keys[e.key] = false);
+
+//========================
+// Player
+//========================
+const player = {
+    x: 100,
+    y: 100,
+    w: 40,
+    h: 60,
+    velX: 0,
+    velY: 0,
+    speed: 4,
+    jumping: false,
+    grounded: false
+};
+
+const gravity = 0.6;
+const friction = 0.8;
+
+//========================
+// Platforms
+//========================
+const platforms = [
+    { x: 0,   y: 470, w: 900, h: 30 },   // ground
+    { x: 150, y: 360, w: 200, h: 20 },
+    { x: 400, y: 300, w: 250, h: 20 },
+    { x: 700, y: 230, w: 150, h: 20 }
+];
+
+//========================
+// Game Loop
+//========================
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+//========================
+// Update Game State
+//========================
+function update() {
+    // Movement
+    if (keys["ArrowRight"] || keys["d"]) {
+        if (player.velX < player.speed) player.velX++;
+    }
+    if (keys["ArrowLeft"] || keys["a"]) {
+        if (player.velX > -player.speed) player.velX--;
+    }
+
+    // Jump
+    if ((keys["ArrowUp"] || keys["w"] || keys[" "]) && player.grounded) {
+        player.velY = -12;
+        player.jumping = true;
+        player.grounded = false;
+    }
+
+    player.velX *= friction;
+    player.velY += gravity;
+
+    player.x += player.velX;
+    player.y += player.velY;
+
+    // Collision Check
+    player.grounded = false;
+    for (let p of platforms) {
+        let dir = collisionCheck(player, p);
+        if (dir === "bottom") {
+            player.jumping = false;
+            player.grounded = true;
+            player.velY = 0;
+        }
+        else if (dir === "top") {
+            player.velY = 0;
+        }
+        else if (dir === "left" || dir === "right") {
+            player.velX = 0;
+        }
+    }
+
+    if (player.grounded) player.velY = 0;
+}
+
+//========================
+// Draw Everything
+//========================
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Background
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Platforms
+    ctx.fillStyle = "#555";
+    for (let p of platforms) {
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+    }
+
+    // Player
+    ctx.fillStyle = "orange";
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+}
+
+//========================
+// Collision Detection
+//========================
+function collisionCheck(shapeA, shapeB) {
+    let vX = (shapeA.x + shapeA.w / 2) - (shapeB.x + shapeB.w / 2);
+    let vY = (shapeA.y + shapeA.h / 2) - (shapeB.y + shapeB.h / 2);
+    let hWidths = (shapeA.w / 2) + (shapeB.w / 2);
+    let hHeights = (shapeA.h / 2) + (shapeB.h / 2);
+    let colDir = null;
+
+    if (Math.abs(vX) < hWidths && Math.abs(vY) < hHeights) {
+        let oX = hWidths - Math.abs(vX);
+        let oY = hHeights - Math.abs(vY);
+        if (oX >= oY) {
+            if (vY > 0) {
+                colDir = "top";
+                shapeA.y += oY;
+            } else {
+                colDir = "bottom";
+                shapeA.y -= oY;
+            }
+        } else {
+            if (vX > 0) {
+                colDir = "left";
+                shapeA.x += oX;
+            } else {
+                colDir = "right";
+                shapeA.x -= oX;
+            }
+        }
+    }
+    return colDir;
+}
+
+// Start Game
+gameLoop();
+</script>
+</body>
+</html>
